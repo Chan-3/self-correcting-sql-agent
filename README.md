@@ -2,6 +2,54 @@
 
 Natural-language to SQL pipeline with validation, execution, and retry-based self-correction.
 
+## Demo Snapshot
+
+- Backend: FastAPI service for NL-to-SQL orchestration and guarded execution
+- Frontend: React + Vite UI proxied to backend `/api`
+- Optional UI: Streamlit app for rapid local testing
+- Safety: policy guard, operation guard, dry-run mode, and audit logging
+
+## Quickstart (Backend + UI)
+
+1. Create and activate virtual environment:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+2. Install backend dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+3. Configure environment:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+4. Start backend API:
+
+```powershell
+uvicorn web_api:app --reload
+```
+
+5. Start frontend in a second terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+6. Open the UI in browser:
+
+`http://127.0.0.1:5173`
+
+The Vite dev server is configured to proxy `/api` requests to `http://127.0.0.1:8000`.
+
 ## Features
 
 - Natural language to MySQL SQL generation
