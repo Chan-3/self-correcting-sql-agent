@@ -84,7 +84,7 @@ Generate a FastAPI route for this operation:"""
     raw = chat(API_SYSTEM_PROMPT, user_message, temperature=0.2)
     raw = re.sub(r"```(?:python)?", "", raw, flags=re.IGNORECASE)
     raw = raw.replace("```", "").strip()
-    return raw
+    return _normalize_generated_route_code(raw)
 
 
 def save_generated_route(user_request: str, route_code: str) -> str:
@@ -99,7 +99,7 @@ def save_generated_route(user_request: str, route_code: str) -> str:
     slug = _slugify(user_request)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filepath = GENERATED_APIS_DIR / f"query_{timestamp}_{slug}.py"
-    filepath.write_text(route_code.strip() + "\n", encoding="utf-8")
+    filepath.write_text(_normalize_generated_route_code(route_code).strip() + "\n", encoding="utf-8")
     return _relative_repo_path(filepath)
 
 
@@ -517,3 +517,29 @@ def _relative_repo_path(path) -> str:
         return str(path.relative_to(PROJECT_ROOT)).replace("\\", "/")
     except Exception:
         return str(path).replace("\\", "/")
+
+
+def _normalize_generated_route_code(route_code: str) -> str:
+    code = route_code.strip()
+
+    if "from fastapi import APIRouter" in code and "HTTPException" not in code:
+        code = code.replace("from fastapi import APIRouter", "from fastapi import APIRouter, HTTPException")
+
+    code = re.sub(
+        r"router\s*=\s*APIRouter\(\s*\)",
+        'router = APIRouter(tags=["generated-query-routes"])',
+        code,
+        flags=re.IGNORECASE,
+    )
+
+    if 'tags=["generated-query-routes"]' not in code and "router = APIRouter(" in code:
+        code = re.sub(
+            r"router\s*=\s*APIRouter\((.*?)\)",
+            lambda m: f'router = APIRouter({m.group(1)}, tags=["generated-query-routes"])'
+            if "tags=" not in m.group(1) else m.group(0),
+            code,
+            count=1,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+
+    return code
