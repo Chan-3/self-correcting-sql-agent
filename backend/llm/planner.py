@@ -5,8 +5,8 @@ structured, actionable sub-tasks for downstream modules.
 import json
 import re
 
-from llm_client import chat
-from schema_retriever import schema_to_prompt_text
+from backend.llm.llm_client import chat
+from backend.db.schema_retriever import schema_to_prompt_text
 
 PLANNER_SYSTEM_PROMPT = """You are a database query planning assistant.
 
@@ -77,7 +77,7 @@ def _try_fast_plan(user_request: str) -> dict | None:
     """Deterministic fast path for unambiguous common intents."""
     request = user_request.strip().lower()
 
-    if any(kw in request for kw in ("drop table", "drop database", "truncate")):
+    if any(kw in request for kw in ("drop table", "delete table", "remove table", "drop database", "truncate")):
         return _make_plan(
             intent="schema",
             target_entities=[],
@@ -137,7 +137,10 @@ def _normalize_plan(plan: dict) -> dict:
 def _default_plan(user_request: str) -> dict:
     """Fallback plan used when LLM is unavailable or returns unparseable output."""
     request = user_request.strip().lower()
-    if any(kw in request for kw in ("delete", "drop", "truncate")):
+    if any(kw in request for kw in ("drop table", "delete table", "remove table", "drop database", "truncate")):
+        risk = "critical"
+        intent = "schema"
+    elif any(kw in request for kw in ("delete", "drop")):
         risk = "high"
         intent = "delete"
     elif any(kw in request for kw in ("update",)):

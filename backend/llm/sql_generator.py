@@ -1,7 +1,7 @@
 import re
-import config
-from llm_client import chat
-from schema_retriever import schema_to_prompt_text
+from backend.core import config
+from backend.llm.llm_client import chat
+from backend.db.schema_retriever import schema_to_prompt_text
 
 SYSTEM_PROMPT = """You are an expert MySQL query writer.
 You will be given a database schema and a user's request in plain English.
@@ -32,19 +32,21 @@ def generate_sql(user_request: str, schema: dict) -> str:
     Returns:
         Raw SQL string.
     """
-    deterministic_sql = _build_schema_intent_sql(user_request)
+    normalized_request = _normalize_schema_action_request(user_request)
+
+    deterministic_sql = _build_schema_intent_sql(normalized_request)
     if deterministic_sql:
         return deterministic_sql
 
-    deterministic_sql = _build_simple_top_n_sql(user_request, schema)
+    deterministic_sql = _build_simple_top_n_sql(normalized_request, schema)
     if deterministic_sql:
         return deterministic_sql
 
-    deterministic_sql = _build_simple_table_scan_sql(user_request, schema)
+    deterministic_sql = _build_simple_table_scan_sql(normalized_request, schema)
     if deterministic_sql:
         return deterministic_sql
 
-    deterministic_sql = _build_common_analytics_sql(user_request, schema)
+    deterministic_sql = _build_common_analytics_sql(normalized_request, schema)
     if deterministic_sql:
         return deterministic_sql
 
@@ -53,7 +55,7 @@ def generate_sql(user_request: str, schema: dict) -> str:
 {schema_text}
 
 User request:
-{user_request}
+{normalized_request}
 
 Write the MySQL query:"""
 
@@ -455,3 +457,9 @@ def _clean_sql(raw: str) -> str:
     if cleaned and not cleaned.endswith(";"):
         cleaned += ";"
     return cleaned
+
+
+def _normalize_schema_action_request(user_request: str) -> str:
+    normalized = re.sub(r"\bdelete\s+table\b", "drop table", user_request, flags=re.IGNORECASE)
+    normalized = re.sub(r"\bremove\s+table\b", "drop table", normalized, flags=re.IGNORECASE)
+    return normalized

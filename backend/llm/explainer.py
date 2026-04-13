@@ -2,7 +2,7 @@
 Explanation Module — generates plain-English summaries of the final SQL query
 and its results for end-user readability.
 """
-from llm_client import chat
+from backend.llm.llm_client import chat
 
 EXPLAINER_SYSTEM_PROMPT = """You are a helpful database assistant that explains SQL query results in plain English.
 

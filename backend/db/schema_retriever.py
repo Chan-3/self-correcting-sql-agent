@@ -1,5 +1,5 @@
-from database import execute_query
-import config
+from backend.core import config
+from backend.db.database import execute_query
 
 
 def get_schema() -> dict:

@@ -30,3 +30,7 @@ Thumbs.db
 logs/audit_log.jsonl
 logs/preflight_backups/
 *.log
+
+# Generated runtime API routes
+generated/apis/query_*.py
+

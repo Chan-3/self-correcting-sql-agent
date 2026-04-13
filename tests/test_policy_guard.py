@@ -1,6 +1,6 @@
 import unittest
 
-from policy_guard import authorize_request
+from backend.core.policy_guard import authorize_request
 
 
 class TestPolicyGuard(unittest.TestCase):

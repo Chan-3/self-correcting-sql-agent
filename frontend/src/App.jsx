@@ -67,6 +67,7 @@ export default function App() {
   const [status, setStatus]               = useState(initialStatus);
   const [schema, setSchema]               = useState({});
   const [examples, setExamples]           = useState([]);
+  const [capabilities, setCapabilities]   = useState(null);
   const [request, setRequest]             = useState("");
   const [generateApi, setGenerateApi]     = useState(false);
   const [dryRun, setDryRun]               = useState(true);
@@ -81,7 +82,9 @@ export default function App() {
   const [planOpen, setPlanOpen]           = useState(false);
   const [workbench, setWorkbench]         = useState([]);
   const [generatedApis, setGeneratedApis] = useState([]); // [{title, code, at}]
+  const [storedApis, setStoredApis]       = useState([]);
   const [activeTab, setActiveTab]         = useState("query"); // "query" | "workbench" | "apis"
+  const [refreshingSchema, setRefreshingSchema] = useState(false);
 
   const textareaRef = useRef(null);
   const canRun = status.database && status.llm && request.trim().length > 0 && !loading;
@@ -94,19 +97,23 @@ export default function App() {
   /* ── data fetching ───────────────────────────────────────────────────── */
   const fetchInitialData = useCallback(async () => {
     try {
-      const [hRes, sRes, eRes, dRes] = await Promise.all([
+      const [hRes, sRes, eRes, dRes, cRes, gRes] = await Promise.all([
         fetch("/api/health"),
         fetch("/api/schema"),
         fetch("/api/examples"),
         fetch("/api/databases"),
+        fetch("/api/capabilities"),
+        fetch("/api/generated-apis"),
       ]);
       if (!hRes.ok) throw new Error("Health check failed");
-      const [health, schemaData, examplesData, dbData] = await Promise.all([
-        hRes.json(), sRes.json(), eRes.json(), dRes.json(),
+      const [health, schemaData, examplesData, dbData, capabilitiesData, generatedApiData] = await Promise.all([
+        hRes.json(), sRes.json(), eRes.json(), dRes.json(), cRes.json(), gRes.json(),
       ]);
       setStatus(health);
       setSchema(schemaData.schema || {});
       setExamples(examplesData.examples || []);
+      setCapabilities(capabilitiesData || null);
+      setStoredApis(generatedApiData.files || []);
       const names = dbData.databases || [];
       setDatabases(names);
       setSelectedDb(
@@ -117,6 +124,28 @@ export default function App() {
       setError("");
     } catch (err) {
       setError(err.message || "Failed to load app data");
+    }
+  }, []);
+
+  const refreshSchema = useCallback(async () => {
+    setRefreshingSchema(true);
+    try {
+      const [schemaRes, generatedRes] = await Promise.all([
+        fetch("/api/schema"),
+        fetch("/api/generated-apis"),
+      ]);
+      if (!schemaRes.ok) throw new Error("Schema refresh failed");
+      const schemaData = await schemaRes.json();
+      setSchema(schemaData.schema || {});
+      if (generatedRes.ok) {
+        const generatedData = await generatedRes.json();
+        setStoredApis(generatedData.files || []);
+      }
+      setError("");
+    } catch (err) {
+      setError(err.message || "Failed to refresh schema");
+    } finally {
+      setRefreshingSchema(false);
     }
   }, []);
 
@@ -137,6 +166,9 @@ export default function App() {
   /* ── query execution ─────────────────────────────────────────────────── */
   async function runQuery(forceConfirm = false) {
     if (!request.trim()) return;
+    const requestText = request.trim();
+    const confirmedForRequest = forceConfirm || confirmHighRisk;
+
     setLoading(true);
     setError("");
     setResult(null);
@@ -145,10 +177,10 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          request: request.trim(),
+          request: requestText,
           generate_api: generateApi,
           dry_run: dryRun,
-          confirm_high_risk: forceConfirm || confirmHighRisk,
+          confirm_high_risk: confirmedForRequest,
         }),
       });
       if (!res.ok) {
@@ -159,12 +191,12 @@ export default function App() {
       setResult(data);
       setPlanOpen(false);
       setHistory((prev) =>
-        [{ request: request.trim(), success: data.success, sql: data.sql, at: new Date().toLocaleTimeString() }, ...prev].slice(0, 8)
+        [{ request: requestText, success: data.success, sql: data.sql, at: new Date().toLocaleTimeString() }, ...prev].slice(0, 8)
       );
       setWorkbench((prev) => [
         {
           id: Date.now(),
-          request: request.trim(),
+          request: requestText,
           sql: data.sql || "",
           success: data.success,
           risk_level: data.risk_level || "low",
@@ -177,10 +209,19 @@ export default function App() {
       ]);
       if (data.api_route) {
         setGeneratedApis((prev) => [
-          { id: Date.now(), title: request.trim(), code: data.api_route, at: new Date().toLocaleTimeString() },
+          {
+            id: Date.now(),
+            title: requestText,
+            code: data.api_route,
+            at: new Date().toLocaleTimeString(),
+            generated_file: data.generated_file || "",
+          },
           ...prev,
         ]);
         setActiveTab("apis");
+      }
+      if (data.success && (data.operation_type === "schema" || data.api_route || data.generated_file)) {
+        await refreshSchema();
       }
     } catch (err) {
       setError(err.message || "Unexpected error");
@@ -257,7 +298,17 @@ export default function App() {
           </section>
 
           <section className="sidebar-section">
-            <span className="section-label">Schema Explorer</span>
+            <div className="section-head">
+              <span className="section-label">Schema Explorer</span>
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={refreshSchema}
+                disabled={refreshingSchema}
+              >
+                {refreshingSchema ? "Refreshing..." : "Refresh Schema"}
+              </button>
+            </div>
             <div className="schema-box">
               {Object.keys(schema).length === 0
                 ? <p className="muted">No schema loaded.</p>
@@ -341,6 +392,38 @@ export default function App() {
               <Toggle checked={confirmHighRisk}  onChange={(e) => setConfirmHighRisk(e.target.checked)}  label="Confirm High-Risk" />
             </div>
           </div>
+
+          {capabilities && (
+            <div className="control-guide">
+              <div className="control-grid">
+                <div className="control-card">
+                  <h3>Dry Run</h3>
+                  <p><strong>Checked:</strong> {capabilities.controls?.dry_run?.checked}</p>
+                  <p><strong>Unchecked:</strong> {capabilities.controls?.dry_run?.unchecked}</p>
+                </div>
+                <div className="control-card">
+                  <h3>Generate API</h3>
+                  <p><strong>Checked:</strong> {capabilities.controls?.generate_api?.checked}</p>
+                  <p><strong>Unchecked:</strong> {capabilities.controls?.generate_api?.unchecked}</p>
+                </div>
+                <div className="control-card">
+                  <h3>Confirm High-Risk</h3>
+                  <p><strong>Checked:</strong> {capabilities.controls?.confirm_high_risk?.checked}</p>
+                  <p><strong>Unchecked:</strong> {capabilities.controls?.confirm_high_risk?.unchecked}</p>
+                </div>
+              </div>
+              <div className="danger-note">
+                <p><strong>Validation:</strong> {capabilities.destructive_operations?.update_delete}</p>
+                <p><strong>DDL:</strong> {capabilities.destructive_operations?.drop_table}</p>
+                <p><strong>Safe practice tables:</strong> Use <code>newsletter_subscribers</code> and <code>campaign_drafts</code> from the sample database for delete, update, truncate, and drop experiments without foreign-key conflicts.</p>
+                <p><strong>Generated APIs:</strong> {capabilities.generated_api_storage?.usage}</p>
+                <p><strong>What api_runner does:</strong> {capabilities.generated_api_storage?.runner_behavior}</p>
+                <p><strong>Quality checks:</strong> {capabilities.quality_tools?.note}</p>
+                <p><strong>Unit tests:</strong> <code>{capabilities.quality_tools?.unit_tests}</code></p>
+                <p><strong>Benchmark:</strong> <code>{capabilities.quality_tools?.benchmark}</code></p>
+              </div>
+            </div>
+          )}
 
           <div className="input-wrap">
             <textarea
@@ -494,6 +577,13 @@ export default function App() {
                 </div>
               )}
 
+              {!result.success && /foreign key constraint/i.test(result.error || "") && (
+                <div className="notice warn">
+                  <span className="notice-icon">⚠</span>
+                  This row is still referenced by another table. Delete the child rows first, or use <code>newsletter_subscribers</code> and <code>campaign_drafts</code> for safe destructive testing.
+                </div>
+              )}
+
               {/* confirm high-risk */}
               {!result.success && result.requires_confirmation && !dryRun && (
                 <button type="button" className="btn run" onClick={() => runQuery(true)} disabled={loading}>
@@ -551,6 +641,7 @@ export default function App() {
                 <div className="notice info">
                   <span className="notice-icon">✓</span>
                   API route generated — view it in the <strong>Generated APIs</strong> tab.
+                  {result.generated_file && <> Saved to <code>{result.generated_file}</code>.</>}
                 </div>
               )}
             </div>
@@ -600,6 +691,31 @@ export default function App() {
                   </div>
                 )}
               </div>
+              <div className="danger-note">
+                <p><strong>Stored on disk:</strong> Generated files live under <code>generated/apis</code>.</p>
+                <p><strong>Use them:</strong> Run <code>python -m uvicorn backend.services.api_runner:app --reload --port 8001</code> to serve every saved generated router.</p>
+                <p><strong>Note:</strong> Session routes below show the generated code immediately, while the stored files list shows what is already saved in the project.</p>
+              </div>
+
+              {storedApis.length > 0 && (
+                <div className="card stored-apis-card">
+                  <div className="card-header">
+                    <h3>Stored API Files</h3>
+                  </div>
+                  <div className="stored-api-list">
+                    {storedApis.map((file) => (
+                      <div key={file.file} className="stored-api-row">
+                        <div>
+                          <div className="stored-api-name">{file.name}</div>
+                          <div className="muted">{file.kind === "crud_router" ? "CRUD router" : "Query route"}</div>
+                        </div>
+                        <code>{file.file}</code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {generatedApis.length === 0 ? (
                 <p className="muted wb-empty">Enable "Generate API" toggle and run a query — routes will appear here.</p>
               ) : (
@@ -615,6 +731,11 @@ export default function App() {
                           onClick={() => setGeneratedApis((prev) => prev.filter(a => a.id !== api.id))}
                         >✕</button>
                       </div>
+                      {api.generated_file && (
+                        <div className="api-file-path">
+                          Saved file: <code>{api.generated_file}</code>
+                        </div>
+                      )}
                       <pre className="api-code">{api.code}</pre>
                     </div>
                   ))}

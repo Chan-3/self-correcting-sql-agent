@@ -6,7 +6,7 @@ Do not edit manually -- regenerate via: "create CRUD APIs for artists"
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from database import get_connection
+from backend.db.database import get_connection
 
 router = APIRouter(prefix="/artists", tags=["artists"])
 

@@ -63,7 +63,7 @@ def classify_intent(user_request: str) -> dict:
 
     critical_markers = [
         "drop ", "truncate ", "alter ", "create database", "drop database",
-        "grant ", "revoke ", "trigger", "stored procedure", "function",
+        "delete table", "remove table", "grant ", "revoke ", "trigger", "stored procedure", "function",
     ]
     high_markers = ["create table", "create index", "rename table", "procedure", "event"]
     medium_markers = ["delete ", "update ", "insert "]

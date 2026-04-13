@@ -1,18 +1,23 @@
 """
 FastAPI backend for the React UI.
-Run with: uvicorn web_api:app --reload
+Run with: uvicorn backend.api.main:app --reload
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-import config
-from audit_logger import read_recent_audit_events
-from controller import run_query
-from database import list_databases, set_active_database, test_connection
-from llm_client import is_llm_available, get_provider_label
-from schema_retriever import get_schema
-from api_generator import generate_crud_api, list_generated_apis, detect_crud_table
+from backend.core import config
+from backend.core.audit_logger import read_recent_audit_events
+from backend.core.controller import run_query
+from backend.db.database import list_databases, set_active_database, test_connection
+from backend.llm.llm_client import is_llm_available, get_provider_label
+from backend.db.schema_retriever import get_schema
+from backend.services.api_generator import (
+    detect_crud_table,
+    generate_crud_api,
+    list_generated_apis,
+    list_generated_api_files,
+)
 
 
 class QueryRequest(BaseModel):
@@ -92,6 +97,10 @@ def examples() -> dict:
             "Show all tables and row counts",
             "Find duplicate email addresses",
             "List the 10 most recently created records",
+            "Delete from reviews where id = 15",
+            "Delete from newsletter_subscribers where id = 1",
+            "Truncate table campaign_drafts",
+            "Create CRUD API for customers",
         ]
     }
 
@@ -109,6 +118,35 @@ def capabilities() -> dict:
             "audit_logging": True,
             "database_switching": True,
             "preflight_backup": True,
+        },
+        "controls": {
+            "dry_run": {
+                "checked": "Preview SQL, validation, and execution plan without running MySQL statements.",
+                "unchecked": "Run the SQL after validation, role checks, and risk checks pass.",
+            },
+            "generate_api": {
+                "checked": "Also generate reusable FastAPI route code for successful requests.",
+                "unchecked": "Only handle the query pipeline and return the query result.",
+            },
+            "confirm_high_risk": {
+                "checked": "Allow high-risk or critical operations to continue when policy permits them.",
+                "unchecked": "Block high-risk or critical operations before execution.",
+            },
+        },
+        "destructive_operations": {
+            "update_delete": "UPDATE and DELETE statements must include a WHERE clause.",
+            "drop_table": "DROP TABLE does not use WHERE because it is DDL. Requests like `drop table ...` or `delete table ...` need DDL permission, admin-level policy, and explicit high-risk confirmation.",
+        },
+        "quality_tools": {
+            "unit_tests": 'python -m unittest discover -s tests -p "test_*.py"',
+            "benchmark": "python _quality_benchmark.py",
+            "note": "Unit tests and the benchmark are recommended for validation, but they are not required to run the product.",
+        },
+        "generated_api_storage": {
+            "single_route_generation": "Generated route files are saved under generated/apis/query_<timestamp>_<slug>.py.",
+            "crud_generation": "CRUD files are saved under generated/apis/<table>.py.",
+            "usage": "Start `python -m uvicorn backend.services.api_runner:app --reload --port 8001` to serve all saved generated routers.",
+            "runner_behavior": "api_runner loads every generated router, exposes them through FastAPI, and serves docs at /docs plus route discovery at /routes.",
         },
     }
 
@@ -195,10 +233,14 @@ def generate_crud(payload: GenerateCrudRequest) -> dict:
 
 @app.get("/api/generated-apis")
 def generated_apis() -> dict:
-    """List all tables that have a generated CRUD API file."""
+    """List saved generated API files and their storage details."""
     tables = list_generated_apis()
+    files = list_generated_api_files()
     return {
         "tables": tables,
-        "count": len(tables),
+        "files": files,
+        "count": len(files),
+        "storage_dir": "generated/apis",
+        "runner_command": "python -m uvicorn backend.services.api_runner:app --reload --port 8001",
         "note": "Restart api_runner to load newly generated files.",
     }

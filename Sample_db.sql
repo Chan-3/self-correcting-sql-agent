@@ -65,6 +65,22 @@ CREATE TABLE IF NOT EXISTS reviews (
     FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
 
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    email       VARCHAR(255) NOT NULL UNIQUE,
+    city        VARCHAR(100),
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS campaign_drafts (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    title       VARCHAR(150) NOT NULL,
+    channel     ENUM('email','sms','push') NOT NULL DEFAULT 'email',
+    status      ENUM('draft','scheduled','paused') NOT NULL DEFAULT 'draft',
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ── Seed Data ─────────────────────────────────────────────
 
 INSERT INTO categories (name) VALUES
@@ -162,6 +178,16 @@ INSERT INTO reviews (product_id, customer_id, rating, comment) VALUES
     (14, 10,4, 'Nice bat, good balance.'),
     (6,  8, 5, 'Very comfortable, great fabric.'),
     (2,  9, 4, 'Sturdy stand, holds phone well.');
+
+INSERT INTO newsletter_subscribers (email, city, is_active) VALUES
+    ('updates.one@example.com', 'Mumbai', TRUE),
+    ('updates.two@example.com', 'Delhi', FALSE),
+    ('updates.three@example.com', 'Pune', TRUE);
+
+INSERT INTO campaign_drafts (title, channel, status) VALUES
+    ('Summer sale teaser', 'email', 'draft'),
+    ('Abandoned cart reminder', 'sms', 'scheduled'),
+    ('Festival push campaign', 'push', 'paused');
 
 -- ── Verify ────────────────────────────────────────────────
 SELECT 'Setup complete!' AS status;

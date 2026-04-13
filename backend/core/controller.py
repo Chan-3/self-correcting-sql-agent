@@ -7,19 +7,24 @@ import re
 import time
 from dataclasses import dataclass, field
 
-from config import ALLOW_DDL, APP_ROLE, MAX_CORRECTION_ATTEMPTS
-from audit_logger import log_audit_event
-from backup_manager import create_preflight_backup
-from operation_guard import build_execution_plan, classify_intent, classify_sql, max_risk_level
-from policy_guard import authorize_request
-from schema_retriever import get_schema
-from sql_generator import generate_sql
-from validator import validate_sql
-from database import execute_query, _strip_delimiter
-from self_corrector import correct_sql
-from api_generator import generate_api_route, generate_crud_api, detect_crud_table
-from planner import plan_request
-from explainer import explain_result
+from backend.core.config import ALLOW_DDL, APP_ROLE, MAX_CORRECTION_ATTEMPTS
+from backend.core.audit_logger import log_audit_event
+from backend.db.backup_manager import create_preflight_backup
+from backend.core.operation_guard import build_execution_plan, classify_intent, classify_sql, max_risk_level
+from backend.core.policy_guard import authorize_request
+from backend.db.schema_retriever import get_schema
+from backend.llm.sql_generator import generate_sql
+from backend.services.validator import validate_sql
+from backend.db.database import execute_query, _strip_delimiter
+from backend.llm.self_corrector import correct_sql
+from backend.services.api_generator import (
+    detect_crud_table,
+    generate_api_route,
+    generate_crud_api,
+    save_generated_route,
+)
+from backend.llm.planner import plan_request
+from backend.llm.explainer import explain_result
 
 
 @dataclass
@@ -328,6 +333,11 @@ def run_query(
     if result.success and generate_api:
         try:
             result.api_route = generate_api_route(user_request, result.sql)
+            result.generated_file = save_generated_route(user_request, result.api_route)
+            log_audit_event("single_route_api_generated", {
+                "user_request": user_request,
+                "generated_file": result.generated_file,
+            })
         except Exception as e:
             result.api_route = f"# API generation failed: {e}"
 
@@ -493,14 +503,17 @@ def _check_intent_sql_alignment(user_request: str, sql: str) -> str | None:
     request = user_request.strip().lower()
     first_keyword = _first_sql_keyword(sql)
 
-    if _contains_any(request, ("drop", "truncate", "alter", "create table", "create database", "rename table")):
+    if _contains_any(
+        request,
+        ("drop", "delete table", "remove table", "truncate", "alter", "create table", "create database", "rename table"),
+    ):
         if first_keyword not in {"DROP", "TRUNCATE", "ALTER", "CREATE", "RENAME"}:
             return (
                 "Corrected SQL drifted from schema-changing intent. "
                 "Keep operation family aligned with requested schema action."
             )
 
-    if _contains_any(request, ("delete",)) and first_keyword != "DELETE":
+    if "delete table" not in request and "remove table" not in request and _contains_any(request, ("delete",)) and first_keyword != "DELETE":
         return "Corrected SQL must remain a DELETE operation to match the user request."
 
     if _contains_any(request, ("update",)) and first_keyword != "UPDATE":

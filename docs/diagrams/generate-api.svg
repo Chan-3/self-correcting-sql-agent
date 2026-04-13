@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="360" viewBox="0 0 980 360" role="img" aria-labelledby="title desc">
+  <title id="title">Generate API control</title>
+  <desc id="desc">A visual showing how successful SQL requests can also become saved FastAPI routes.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f1e8; }
+      .card { fill: #fffdf8; stroke: #d8cfbf; stroke-width: 2; rx: 20; }
+      .accent { fill: #eef7f2; stroke: #0a6e57; }
+      .line { stroke: #7a7366; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .title { font: 700 28px Arial, sans-serif; fill: #1c2b28; }
+      .label { font: 700 19px Arial, sans-serif; fill: #1c2b28; }
+      .text { font: 400 16px Arial, sans-serif; fill: #33423f; }
+      .mono { font: 400 15px 'Courier New', monospace; fill: #0b5a48; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7a7366" />
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="980" height="360" rx="24" />
+  <text class="title" x="40" y="52">Generate API: turn a successful request into reusable backend code</text>
+
+  <rect class="card" x="40" y="96" width="220" height="176" rx="20" />
+  <text class="label" x="66" y="132">1. Run a successful query</text>
+  <text class="text" x="66" y="165">Example prompt:</text>
+  <text class="text" x="66" y="190">"Show all table counts"</text>
+  <text class="text" x="66" y="220">Dry Run should be off</text>
+
+  <rect class="card accent" x="378" y="96" width="240" height="176" rx="20" />
+  <text class="label" x="404" y="132">2. Generate FastAPI route</text>
+  <text class="text" x="404" y="165">The backend returns route code</text>
+  <text class="text" x="404" y="190">and saves it to disk.</text>
+  <text class="mono" x="404" y="230">generated/apis/query_*.py</text>
+
+  <rect class="card" x="736" y="96" width="206" height="176" rx="20" />
+  <text class="label" x="762" y="132">3. Use the saved API</text>
+  <text class="text" x="762" y="165">Start the generated API runner:</text>
+  <text class="mono" x="762" y="200">uvicorn backend.services</text>
+  <text class="mono" x="762" y="222">.api_runner:app --port 8001</text>
+  <text class="text" x="762" y="252">Now the route is reusable.</text>
+
+  <path class="line" d="M260 184 H378" />
+  <path class="line" d="M618 184 H736" />
+</svg>

@@ -1,11 +1,11 @@
 from datetime import datetime
 from pathlib import Path
 
-from database import get_connection
-import config
+from backend.core import config
+from backend.db.database import get_connection
 
 
-BACKUP_DIR = Path("logs") / "preflight_backups"
+BACKUP_DIR = config.LOG_DIR / "preflight_backups"
 
 
 def create_preflight_backup(targets: list[str], sql: str) -> str:

@@ -9,15 +9,15 @@ Two modes:
      schema, produce a complete GET/GET-by-id/POST/PUT/DELETE file and
      save it to generated/apis/<table>.py.
 """
-import os
 import re
 import textwrap
-from pathlib import Path
+from datetime import datetime
 
-from llm_client import chat
+from backend.core.config import GENERATED_APIS_DIR as CORE_GENERATED_APIS_DIR, PROJECT_ROOT
+from backend.llm.llm_client import chat
 
 # Directory where per-table CRUD files are written
-GENERATED_APIS_DIR = Path(__file__).parent / "generated" / "apis"
+GENERATED_APIS_DIR = CORE_GENERATED_APIS_DIR
 
 # ── mode 1: single route from SQL (LLM) ──────────────────────────────────────
 
@@ -36,13 +36,13 @@ Rules:
 - Use snake_case for function names and route paths.
 - The route must be a complete @router.get/post/put/delete decorated function.
 - Import only from fastapi, pydantic, and mysql.connector.
-- Assume a `get_connection()` function is available from `database` module.
+- Assume a `get_connection()` function is available from `backend.db.database`.
 - Always close cursor and connection in a finally block.
 
 Template to follow:
 from fastapi import APIRouter, HTTPException
 from mysql.connector import Error
-from database import get_connection
+from backend.db.database import get_connection
 
 router = APIRouter()
 
@@ -87,6 +87,22 @@ Generate a FastAPI route for this operation:"""
     return raw
 
 
+def save_generated_route(user_request: str, route_code: str) -> str:
+    """
+    Persist a generated single-route FastAPI file under generated/apis/.
+
+    The saved file can be served later by backend.services.api_runner because
+    the LLM prompt requires the route to include a module-level `router`.
+    """
+    GENERATED_APIS_DIR.mkdir(parents=True, exist_ok=True)
+
+    slug = _slugify(user_request)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filepath = GENERATED_APIS_DIR / f"query_{timestamp}_{slug}.py"
+    filepath.write_text(route_code.strip() + "\n", encoding="utf-8")
+    return _relative_repo_path(filepath)
+
+
 def generate_full_api_file(routes: list[dict]) -> str:
     """
     Combine multiple generated routes into a single downloadable FastAPI file.
@@ -100,7 +116,7 @@ def generate_full_api_file(routes: list[dict]) -> str:
         from pydantic import BaseModel
         from typing import Optional, List
         import mysql.connector
-        from database import get_connection
+        from backend.db.database import get_connection
 
         app = FastAPI(title="Auto-Generated API", version="1.0.0")
         router = APIRouter()
@@ -207,7 +223,7 @@ def generate_crud_api(table_name: str, schema: dict) -> tuple[str, str]:
     GENERATED_APIS_DIR.mkdir(parents=True, exist_ok=True)
     filepath = GENERATED_APIS_DIR / f"{table_name}.py"
     filepath.write_text(code, encoding="utf-8")
-    return code, str(filepath)
+    return code, _relative_repo_path(filepath)
 
 
 def list_generated_apis() -> list[str]:
@@ -219,6 +235,25 @@ def list_generated_apis() -> list[str]:
         for p in sorted(GENERATED_APIS_DIR.glob("*.py"))
         if p.stem != "__init__"
     ]
+
+
+def list_generated_api_files() -> list[dict]:
+    """Return richer metadata for generated API files."""
+    if not GENERATED_APIS_DIR.exists():
+        return []
+
+    files = []
+    for path in sorted(GENERATED_APIS_DIR.glob("*.py")):
+        if path.stem == "__init__":
+            continue
+        files.append(
+            {
+                "name": path.stem,
+                "file": _relative_repo_path(path),
+                "kind": "query_route" if path.stem.startswith("query_") else "crud_router",
+            }
+        )
+    return files
 
 
 # ── rendering helpers ─────────────────────────────────────────────────────────
@@ -248,7 +283,7 @@ def _render_file(
         "from fastapi import APIRouter, HTTPException",
         "from pydantic import BaseModel",
         "from typing import Optional",
-        "from database import get_connection",
+        "from backend.db.database import get_connection",
         "",
         f'router = APIRouter(prefix="{route_prefix}", tags=["{tag}"])',
         "",
@@ -470,3 +505,15 @@ def _resolve_table(entity: str, schema: dict) -> str | None:
         if c in lookup:
             return lookup[c]
     return None
+
+
+def _slugify(text: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+    return slug[:40] or "generated_route"
+
+
+def _relative_repo_path(path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT)).replace("\\", "/")
+    except Exception:
+        return str(path).replace("\\", "/")

@@ -2,7 +2,7 @@ import mysql.connector
 from mysql.connector import Error
 import os
 
-import config
+from backend.core import config
 
 
 def get_connection(database_name: str | None = None):

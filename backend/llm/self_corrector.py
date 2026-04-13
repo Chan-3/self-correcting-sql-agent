@@ -1,5 +1,5 @@
-from llm_client import chat
-from schema_retriever import schema_to_prompt_text
+from backend.llm.llm_client import chat
+from backend.db.schema_retriever import schema_to_prompt_text
 
 CORRECTION_SYSTEM_PROMPT = """You are an expert MySQL debugger.
 You will be given:

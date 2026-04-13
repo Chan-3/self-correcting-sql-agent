@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from sql_generator import generate_sql
+from backend.llm.sql_generator import generate_sql
 
 
 class TestSqlGenerator(unittest.TestCase):
@@ -28,14 +28,14 @@ class TestSqlGenerator(unittest.TestCase):
             }
         }
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_show_tables_uses_schema_query(self, mock_chat):
         sql = generate_sql("show all tables", self.schema)
 
         self.assertEqual(sql, "SHOW TABLES;")
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_show_tables_and_row_counts_uses_information_schema(self, mock_chat):
         sql = generate_sql("show all tables and row counts", self.schema)
 
@@ -44,7 +44,7 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertTrue(sql.strip().endswith(";"))
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_simple_top_n_uses_deterministic_query(self, mock_chat):
         sql = generate_sql("top 5 customers", self.schema)
 
@@ -53,7 +53,7 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertIn("LIMIT 5;", sql)
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_semantic_top_n_still_uses_llm(self, mock_chat):
         mock_chat.return_value = "SELECT c.id FROM customers c ORDER BY c.id DESC LIMIT 5;"
 
@@ -62,7 +62,7 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertEqual(sql, "SELECT c.id FROM customers c ORDER BY c.id DESC LIMIT 5;")
         mock_chat.assert_called_once()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_show_rows_from_table_desc_uses_deterministic_query(self, mock_chat):
         sql = generate_sql("show rows from employee sorted in descending order", self.schema)
 
@@ -72,7 +72,7 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertTrue(sql.strip().endswith(";"))
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_show_all_rows_from_table_skips_default_limit(self, mock_chat):
         sql = generate_sql("show all rows from employee", self.schema)
 
@@ -82,7 +82,7 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertTrue(sql.strip().endswith(";"))
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_show_rows_from_table_with_explicit_limit_uses_requested_limit(self, mock_chat):
         sql = generate_sql("show rows from employee limit 3", self.schema)
 
@@ -91,7 +91,7 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertTrue(sql.strip().endswith(";"))
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_duplicate_email_uses_deterministic_grouping(self, mock_chat):
         sql = generate_sql("find duplicate email addresses", self.schema)
 
@@ -100,7 +100,7 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertIn("email", sql.lower())
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_recent_records_uses_deterministic_limit(self, mock_chat):
         schema = {
             "events": {
@@ -119,7 +119,7 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertIn("LIMIT 10;", sql)
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_count_by_uses_grouping_when_table_and_column_exist(self, mock_chat):
         schema = {
             "employees": {
@@ -138,14 +138,14 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertIn("COUNT(*) AS total_count", sql)
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_top_n_unknown_table_fails_fast(self, mock_chat):
         with self.assertRaises(ValueError):
             generate_sql("top 5 suppliers", self.schema)
 
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_artist_exhibition_prompt_uses_deterministic_join(self, mock_chat):
         schema = {
             "artist_profile": {
@@ -180,19 +180,28 @@ class TestSqlGenerator(unittest.TestCase):
         self.assertIn("AS exhibition_name", sql)
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_count_by_unknown_entity_fails_fast(self, mock_chat):
         with self.assertRaises(ValueError):
             generate_sql("count suppliers by role", self.schema)
 
         mock_chat.assert_not_called()
 
-    @patch("sql_generator.chat")
+    @patch("backend.llm.sql_generator.chat")
     def test_count_by_missing_column_fails_fast(self, mock_chat):
         with self.assertRaises(ValueError):
             generate_sql("count employee by role", self.schema)
 
         mock_chat.assert_not_called()
+
+    @patch("backend.llm.sql_generator.chat")
+    def test_delete_table_is_normalized_to_drop_table(self, mock_chat):
+        mock_chat.return_value = "DROP TABLE customers;"
+
+        sql = generate_sql("delete table customers", self.schema)
+
+        self.assertEqual(sql, "DROP TABLE customers;")
+        mock_chat.assert_called_once()
 
 
 if __name__ == "__main__":

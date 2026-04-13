@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">SQL Agent request flow</title>
+  <desc id="desc">A visual explanation of how the request moves through schema loading, SQL generation, validation, risk checks, execution, API generation, explanation, and audit logging.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f1e8; }
+      .panel { fill: #fffdf8; stroke: #d8cfbf; stroke-width: 2; rx: 18; }
+      .step { fill: #fffdf8; stroke: #b8ab94; stroke-width: 2; rx: 18; }
+      .safe { fill: #eef7f2; stroke: #0a6e57; }
+      .warn { fill: #fff6e9; stroke: #c07a18; }
+      .risk { fill: #fff0ed; stroke: #b53a2a; }
+      .line { stroke: #7a7366; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .title { font: 700 32px Arial, sans-serif; fill: #1c2b28; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #5f6f6b; }
+      .label { font: 700 18px Arial, sans-serif; fill: #1c2b28; }
+      .text { font: 400 15px Arial, sans-serif; fill: #32413e; }
+      .small { font: 400 14px Arial, sans-serif; fill: #5f6f6b; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7a7366" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="520" rx="24" />
+  <text class="title" x="52" y="58">How one request moves through the SQL Agent</text>
+  <text class="subtitle" x="52" y="88">The same pipeline supports preview mode, execution mode, and optional FastAPI route generation.</text>
+
+  <rect class="panel" x="40" y="118" width="1120" height="352" />
+
+  <rect class="step safe" x="64" y="152" width="180" height="112" rx="18" />
+  <text class="label" x="88" y="188">1. Ask in English</text>
+  <text class="text" x="88" y="216">Example:</text>
+  <text class="text" x="88" y="239">"Show table counts"</text>
+
+  <rect class="step" x="286" y="152" width="180" height="112" rx="18" />
+  <text class="label" x="308" y="188">2. Read schema</text>
+  <text class="text" x="308" y="216">Loads live tables,</text>
+  <text class="text" x="308" y="239">columns, and keys.</text>
+
+  <rect class="step" x="508" y="152" width="180" height="112" rx="18" />
+  <text class="label" x="529" y="188">3. Generate SQL</text>
+  <text class="text" x="529" y="216">Planner + SQL builder</text>
+  <text class="text" x="529" y="239">produce a first query.</text>
+
+  <rect class="step warn" x="730" y="152" width="190" height="112" rx="18" />
+  <text class="label" x="752" y="188">4. Validate + classify</text>
+  <text class="text" x="752" y="216">Checks schema, WHERE,</text>
+  <text class="text" x="752" y="239">DDL, and risk level.</text>
+
+  <rect class="step risk" x="962" y="152" width="168" height="112" rx="18" />
+  <text class="label" x="983" y="188">5. Risk gate</text>
+  <text class="text" x="983" y="216">Role policy and</text>
+  <text class="text" x="983" y="239">confirmation decide.</text>
+
+  <rect class="step safe" x="140" y="316" width="220" height="112" rx="18" />
+  <text class="label" x="166" y="352">Dry Run checked</text>
+  <text class="text" x="166" y="380">Preview SQL and plan.</text>
+  <text class="text" x="166" y="403">Nothing touches MySQL.</text>
+
+  <rect class="step" x="424" y="316" width="220" height="112" rx="18" />
+  <text class="label" x="449" y="352">Dry Run unchecked</text>
+  <text class="text" x="449" y="380">Query executes on MySQL.</text>
+  <text class="text" x="449" y="403">Failures enter self-fix loop.</text>
+
+  <rect class="step" x="708" y="316" width="220" height="112" rx="18" />
+  <text class="label" x="731" y="352">Optional API output</text>
+  <text class="text" x="731" y="380">Generate API saves a route</text>
+  <text class="text" x="731" y="403">under generated/apis/.</text>
+
+  <rect class="step safe" x="992" y="316" width="120" height="112" rx="18" />
+  <text class="label" x="1013" y="352">Finish</text>
+  <text class="text" x="1013" y="380">Explain result</text>
+  <text class="text" x="1013" y="403">and log event.</text>
+
+  <path class="line" d="M244 208 H286" />
+  <path class="line" d="M466 208 H508" />
+  <path class="line" d="M688 208 H730" />
+  <path class="line" d="M920 208 H962" />
+  <path class="line" d="M1046 264 V302 H250" />
+  <path class="line" d="M360 372 H424" />
+  <path class="line" d="M644 372 H708" />
+  <path class="line" d="M928 372 H992" />
+
+  <text class="small" x="54" y="496">Key idea: preview, execution, API generation, and confirmation are all branches of the same validated pipeline.</text>
+</svg>

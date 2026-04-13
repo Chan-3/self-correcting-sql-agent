@@ -1,6 +1,6 @@
 import re
 import sqlparse
-from config import ALLOW_DDL, ALLOW_MULTI_STATEMENTS
+from backend.core.config import ALLOW_DDL, ALLOW_MULTI_STATEMENTS
 
 
 def validate_sql(

@@ -1,9 +1,11 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
+from backend.core.config import LOG_DIR
 
-AUDIT_PATH = Path("logs") / "audit_log.jsonl"
+
+AUDIT_PATH = LOG_DIR / "audit_log.jsonl"
 
 
 def log_audit_event(event_type: str, payload: dict) -> None:
@@ -11,7 +13,7 @@ def log_audit_event(event_type: str, payload: dict) -> None:
     try:
         AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)
         event = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event_type": event_type,
             "payload": payload,
         }

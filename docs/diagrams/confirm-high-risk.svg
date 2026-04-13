@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="360" viewBox="0 0 980 360" role="img" aria-labelledby="title desc">
+  <title id="title">Confirm High Risk control</title>
+  <desc id="desc">A visual showing when the app blocks risky operations and when confirmation is required.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f1e8; }
+      .card { fill: #fffdf8; stroke: #d8cfbf; stroke-width: 2; rx: 20; }
+      .warn { fill: #fff8ef; stroke: #c07a18; }
+      .risk { fill: #fff0ed; stroke: #b53a2a; }
+      .safe { fill: #eef7f2; stroke: #0a6e57; }
+      .title { font: 700 28px Arial, sans-serif; fill: #1c2b28; }
+      .label { font: 700 19px Arial, sans-serif; fill: #1c2b28; }
+      .text { font: 400 16px Arial, sans-serif; fill: #33423f; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="980" height="360" rx="24" />
+  <text class="title" x="40" y="52">Confirm High-Risk: the explicit approval gate</text>
+
+  <rect class="card risk" x="40" y="96" width="280" height="214" rx="20" />
+  <text class="label" x="66" y="132">What counts as risky</text>
+  <text class="text" x="66" y="168">- DROP TABLE</text>
+  <text class="text" x="66" y="196">- TRUNCATE TABLE</text>
+  <text class="text" x="66" y="224">- ALTER TABLE</text>
+  <text class="text" x="66" y="252">- destructive multi-step SQL</text>
+  <text class="text" x="66" y="280">- policy-sensitive write requests</text>
+
+  <rect class="card warn" x="350" y="96" width="280" height="214" rx="20" />
+  <text class="label" x="376" y="132">Unchecked</text>
+  <text class="text" x="376" y="168">High-risk requests stop before</text>
+  <text class="text" x="376" y="196">execution. The app returns the</text>
+  <text class="text" x="376" y="224">generated SQL and asks for</text>
+  <text class="text" x="376" y="252">confirmation instead of running it.</text>
+
+  <rect class="card safe" x="660" y="96" width="280" height="214" rx="20" />
+  <text class="label" x="686" y="132">Checked</text>
+  <text class="text" x="686" y="168">Execution may continue only if</text>
+  <text class="text" x="686" y="196">role policy allows it and validation</text>
+  <text class="text" x="686" y="224">passes. High or critical actions</text>
+  <text class="text" x="686" y="252">also create preflight backups.</text>
+</svg>

@@ -6,7 +6,7 @@ Switch providers by changing LLM_PROVIDER in your .env file:
   - "openai"  → cloud, paid, requires OpenAI key
 """
 import requests
-from config import (
+from backend.core.config import (
     LLM_PROVIDER,
     OLLAMA_BASE_URL, OLLAMA_MODEL,
     GROQ_API_KEY, GROQ_MODEL,
@@ -144,6 +144,6 @@ def _check_ollama() -> bool:
         return False
 
 
-# Keep backward-compat alias used in app.py
+# Keep backward-compat alias used in older callers.
 def is_ollama_running() -> bool:
     return is_llm_available()

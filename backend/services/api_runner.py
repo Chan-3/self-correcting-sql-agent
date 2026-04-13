@@ -2,18 +2,18 @@
 API runner — serves all auto-generated CRUD routers.
 
 Usage:
-  uvicorn api_runner:app --reload --port 8001
+  uvicorn backend.services.api_runner:app --reload --port 8001
 
 Any file placed in generated/apis/<table>.py that exposes a `router`
 variable is automatically discovered and mounted at startup.
 """
 import importlib.util
 import sys
-from pathlib import Path
 
 from fastapi import FastAPI
+from backend.core.config import GENERATED_APIS_DIR
 
-APIS_DIR = Path(__file__).parent / "generated" / "apis"
+APIS_DIR = GENERATED_APIS_DIR
 
 app = FastAPI(
     title="SQL Agent — Generated CRUD APIs",
@@ -53,6 +53,20 @@ def _load_generated_routers() -> None:
 
 
 _load_generated_routers()
+
+
+@app.get("/", tags=["meta"])
+def index() -> dict:
+    return {
+        "message": "Generated API runner is active.",
+        "loaded_tables": _loaded,
+        "load_errors": _errors,
+        "next_steps": {
+            "docs": "/docs",
+            "health": "/health",
+            "routes": "/routes",
+        },
+    }
 
 
 @app.get("/health", tags=["meta"])

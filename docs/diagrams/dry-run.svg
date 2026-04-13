@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="320" viewBox="0 0 980 320" role="img" aria-labelledby="title desc">
+  <title id="title">Dry Run control</title>
+  <desc id="desc">A visual showing what happens when Dry Run is checked versus unchecked.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f1e8; }
+      .card { fill: #fffdf8; stroke: #d8cfbf; stroke-width: 2; rx: 20; }
+      .left { fill: #eef7f2; stroke: #0a6e57; }
+      .right { fill: #fff8ef; stroke: #c07a18; }
+      .title { font: 700 28px Arial, sans-serif; fill: #1c2b28; }
+      .label { font: 700 21px Arial, sans-serif; fill: #1c2b28; }
+      .text { font: 400 16px Arial, sans-serif; fill: #33423f; }
+      .tag { font: 700 14px Arial, sans-serif; fill: #0a6e57; }
+      .tag2 { font: 700 14px Arial, sans-serif; fill: #9c5d00; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="980" height="320" rx="24" />
+  <text class="title" x="42" y="52">Dry Run: preview mode versus execution mode</text>
+
+  <rect class="card left" x="42" y="84" width="420" height="194" rx="20" />
+  <text class="label" x="70" y="122">Checked</text>
+  <text class="tag" x="70" y="149">SAFE PREVIEW</text>
+  <text class="text" x="70" y="184">- Generates SQL from the prompt</text>
+  <text class="text" x="70" y="212">- Validates schema and safety rules</text>
+  <text class="text" x="70" y="240">- Shows plan, risk, and SQL output</text>
+  <text class="text" x="70" y="268">- Does not execute on MySQL</text>
+
+  <rect class="card right" x="516" y="84" width="420" height="194" rx="20" />
+  <text class="label" x="544" y="122">Unchecked</text>
+  <text class="tag2" x="544" y="149">LIVE EXECUTION</text>
+  <text class="text" x="544" y="184">- Runs after validation passes</text>
+  <text class="text" x="544" y="212">- Uses role and risk policy checks</text>
+  <text class="text" x="544" y="240">- Can change data or schema</text>
+  <text class="text" x="544" y="268">- Best used after a safe preview</text>
+</svg>
